@@ -1,49 +1,84 @@
-from scapy.all import *
+#-*- coding: utf-8 -*-
+
 import socket
 import thread
 import logging as log
+import sys
 
-#log.basicConfig(level=log.DEBUG)
+log.basicConfig(filename='./error.log',level=log.ERROR)
+#log.basicConfig(filename='./debug.log',level=log.DEBUG)
 
 HOST = '127.0.0.1'
 PORT = 8080
 
 dummy = 'GET / HTTP/1.1\r\nHost: test.gilgil.net\r\n\r\n'
 
-MAXBUF = 4096
+MAXBUF = 16000
 
 def getHostName(data):
-	tmp = data.split('\r\n')
-	return tmp[1][tmp[1].find("Host: ")+6:]
+	hostIndex = data.find("Host: ")
+	return data[hostIndex:].split('\r\n')[0][len("Host: "):]
 
-def forward(data):
-	new_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+def parsePort(data):
+	#CONNECT client-lb.dropbox.com:443 HTTP/1.1
+	tmp = data.split()[1]
+	return int(tmp[tmp.find(':')+1:])
+
 
 
 def handler(s, addr):
 	data = s.recv(MAXBUF)
-	log.debug("####################################")
-	log.debug("HTTP connection")
+	#log.debug("####################################")
+	#log.debug("HTTP connection")
 	log.debug(data)
-	log.debug("####################################")
+	#log.debug("####################################")
 	#log.debug(getHostName(data))
+	if not data:
+		s.close()
+		return
+
 
 	new_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	log.debug("new sock connect to " + getHostName(data))
-	log.debug(getHostName(data))
-	new_sock.connect( (getHostName(data), 80) )
-	log.debug("connect ok")
-	new_sock.send(dummy + data)
+	outport = 80
+	if data[:4] == "GET " or data[:5] == "POST ":
+		outport = 80
+	elif data[:8] == "CONNECT ":
+		# CONNECT client-lb.dropbox.com:443 HTTP/1.1
+		outport = parsePort(data)
 
+	try:
+		new_sock.connect( (getHostName(data), outport) )
+	except Exception as e:
+		log.error(e)
+		log.error("getHostName data error")
+		#log.error(getHostName(data))
+		log.error("\n############################################\n")
+		log.error("data is\n")
+		log.error(data)
+		log.error("\n############################################\n")
+		sys.exit(1)
+	#log.debug("connect ok")
+	new_sock.send(dummy + data)
 	while True:
 		recv = new_sock.recv(MAXBUF)
 		if not recv:
 			break
 		if recv.count("HTTP/1.1 ") > 1:
 			recv = recv[1 + recv[1:].find("HTTP/1.1 "):]
-		print "recv ok"
-		print recv
-		s.send(recv)
+		log.debug(recv)
+		try:
+			s.send(recv)
+		except Exception as e:
+			log.error(e)
+			log.error("s.send(recv) error")
+			log.error("\n############################################\n")
+			log.error("data was\n")
+			log.error(data)
+			log.error("\n############################################\n")
+			log.error("recv is\n")
+			log.error(recv)
+			log.error("\n############################################\n")
+			break
 
 	new_sock.close()
 	s.close()
