@@ -34,7 +34,6 @@ def handler(s, addr):
 	#log.debug("####################################")
 	#log.debug(getHostName(data))
 	if not data:
-		s.close()
 		return
 
 
@@ -56,7 +55,8 @@ def handler(s, addr):
 		log.error("data is\n")
 		log.error(data)
 		log.error("\n############################################\n")
-		sys.exit(1)
+		new.sock.close()
+		return
 	#log.debug("connect ok")
 	new_sock.send(dummy + data)
 	while True:
@@ -81,7 +81,6 @@ def handler(s, addr):
 			break
 
 	new_sock.close()
-	s.close()
 
 
 if __name__ == '__main__':
