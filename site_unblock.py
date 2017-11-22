@@ -85,11 +85,14 @@ def handler(s, addr):
 
 
 if __name__ == '__main__':
-	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	s.bind( (HOST, PORT) )
-	s.listen(5)
+	try:
+		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		s.bind( (HOST, PORT) )
+		s.listen(5)
 
-	while True:
-		c, addr = s.accept()
-		log.debug("connect" + str(addr))
-		thread.start_new_thread(handler, (c, addr))
+		while True:
+			c, addr = s.accept()
+			print "connect" + str(addr)
+			thread.start_new_thread(handler, (c, addr))
+	finally:
+		s.close()
