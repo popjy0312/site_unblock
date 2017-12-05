@@ -13,6 +13,8 @@ PORT = 8080
 
 dummy = 'GET / HTTP/1.1\r\nHost: test.gilgil.net\r\n\r\n'
 
+HTTP_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'CONNECT', 'OPTIONS', 'TRACE', 'PATCH']
+
 MAXBUF = 16000
 
 def getHostName(data):
@@ -39,12 +41,6 @@ def handler(s, addr):
 
 	new_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	outport = 80
-	if data[:4] == "GET " or data[:5] == "POST ":
-		outport = 80
-	elif data[:8] == "CONNECT ":
-		# CONNECT client-lb.dropbox.com:443 HTTP/1.1
-		outport = parsePort(data)
-
 	try:
 		new_sock.connect( (getHostName(data), outport) )
 	except Exception as e:
@@ -93,5 +89,7 @@ if __name__ == '__main__':
 			c, addr = s.accept()
 			print "connect" + str(addr)
 			thread.start_new_thread(handler, (c, addr))
+	except Exception as e:
+		log.error(e)
 	finally:
 		s.close()
